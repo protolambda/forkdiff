@@ -1,0 +1,51 @@
+{{define "main" }}
+{{- /*gotype: github.com/protolambda/forkdiff.Page*/ -}}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}}</title>
+</head>
+<body>
+    <div class="content">
+        {{ template "forkdef" (nestForkDefinition .Def 1) }}
+
+        <div>
+            <h1>Remaining diff</h1>
+            {{ range $i, $filepath := (remainingPatches) }}
+                <div>
+                    <code>$filepath</code>
+                    {{ renderPatch $filepath }}
+                </div>
+            {{ end }}
+        </div>
+    </div>
+</body>
+</html>
+{{end}}
+
+{{define "forkdef"}}
+{{- /*gotype: github.com/protolambda/forkdiff.NestedForkDefinition*/ -}}
+<div>
+    {{ if .Def.Title }}
+        {{.Title}}
+    {{end}}
+    <div>{{ renderMarkdown .Def.Description}}</div>
+    <div>
+        {{ range $i, $glob := .Def.Globs }}
+            {{ range $j, $filepath := (expandGlob $glob) }}
+                <div>
+                    <code>$filepath</code>
+                    {{ renderPatch $filepath }}
+                </div>
+            {{end}}
+        {{end}}
+    </div>
+    <div>
+        {{ range $index, $element := .Def.Sub }}
+            {{ template "forkdef" (nestForkDefinition $element .NextLevel) }}
+        {{ end }}
+    </div>
+</div>
+{{end}}
