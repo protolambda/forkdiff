@@ -28,7 +28,9 @@ The `fork.yaml` defines the page structure, to organize and document the diff of
 Example:
 
 ```yaml
-title: "Example Fork"  # Define the HTML page title
+title: "protolambda's Greeter fork"  # Define the HTML page title
+footer: |  # define the footer with markdown
+  [Greeter](https://github.com/protolambda/greeter) fork overview &middot created with [Forkdiff](https://github.com/protolambda/forkdiff)
 def:
     title: "Example Fork diff"
     description: | # description in markdown
@@ -39,7 +41,7 @@ def:
       - "hello/world/greeter.go"  # list files of which the patches should be included
       - "hello/util/*"  # use file globs to include multiple files
     sub:
-      - title: "fork testing"  # titles are optional
+      - title: ""  # titles are optional
         description: "This fork tests the modifications to `greeter.go`"
         globs:
           - "hello/world/greeter.go"

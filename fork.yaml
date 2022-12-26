@@ -1,0 +1,13 @@
+title: op-geth
+footer: Op-geth is awesome
+def:
+  title: "op-geth"
+  description: |
+    Op-geth changes (TODO)
+  sub:
+    - title: "Consensus changes"
+      globs:
+        - "core/**/*[!_test].go"
+    - title: "Engine API changes"
+      globs:
+        - "eth/catalyst/*"

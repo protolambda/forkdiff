@@ -3,7 +3,9 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"embed"
+	"encoding/hex"
 	"flag"
 	"fmt"
 	t2html "github.com/buildkite/terminal-to-html/v3"
@@ -45,10 +47,10 @@ func main() {
 	must(err, "failed to open git repository %q", *repoPathStr)
 
 	baseRef, err := repo.Reference(plumbing.ReferenceName(*baseRefStr), true)
-	must(err, "failed to find base git ref %q", *baseRef)
+	must(err, "failed to find base git ref %q", *baseRefStr)
 
 	targetRef, err := repo.Reference(plumbing.ReferenceName(*targetRefStr), true)
-	must(err, "failed to find target git ref %q", *targetRef)
+	must(err, "failed to find target git ref %q", *targetRefStr)
 
 	baseCommit, err := repo.CommitObject(baseRef.Hash())
 	must(err, "failed to open base commit %s", baseRef.Hash())
@@ -60,7 +62,7 @@ func main() {
 	targetTree, err := targetCommit.Tree()
 	must(err, "failed to open target git tree")
 
-	forkPatch, err := targetTree.PatchContext(context.Background(), baseTree)
+	forkPatch, err := baseTree.PatchContext(context.Background(), targetTree)
 	must(err, "failed to compute patch between base and target")
 
 	patchByName := make(map[string]diff.FilePatch, len(forkPatch.FilePatches()))
@@ -77,17 +79,14 @@ func main() {
 		remaining[k] = struct{}{}
 	}
 
-	markdownRenderer := html.NewRenderer(html.RendererOptions{
-		Flags:     html.Smartypants | html.SmartypantsFractions | html.SmartypantsDashes | html.SmartypantsLatexDashes,
-		Generator: "forkdiff",
-	})
-	markdownParser := parser.NewWithExtensions(parser.CommonExtensions | parser.OrderedListStart)
-
-	templ, err := template.ParseFS(page)
-	must(err, "failed to parse page template")
-
+	templ := template.New("main")
 	templ.Funcs(template.FuncMap{
 		"renderMarkdown": func(md string) string {
+			markdownRenderer := html.NewRenderer(html.RendererOptions{
+				Flags:     html.Smartypants | html.SmartypantsFractions | html.SmartypantsDashes | html.SmartypantsLatexDashes,
+				Generator: "forkdiff",
+			})
+			markdownParser := parser.NewWithExtensions(parser.CommonExtensions | parser.OrderedListStart)
 			return string(markdown.ToHTML([]byte(md), markdownParser, markdownRenderer))
 		},
 		"renderPatch": func(path string) (string, error) {
@@ -115,22 +114,31 @@ func main() {
 			sort.Strings(out)
 			return out
 		},
-		"nestForkDefinition": func(def *ForkDefinition, level int) NestedForkDefinition {
-			return NestedForkDefinition{Def: def, Level: level}
+		"nestForkDefinition": func(def *ForkDefinition, level int) *NestedForkDefinition {
+			return &NestedForkDefinition{Def: def, Level: level}
 		},
 		"expandGlob": func(globPattern string) (out []string, err error) {
-			for i, entry := range targetTree.Entries {
-				if ok, err := filepath.Match(globPattern, entry.Name); err != nil {
-					return nil, fmt.Errorf("failed to glob match entry %d (%q) against pattern %q", i, entry.Name, globPattern)
+			for name := range patchByName {
+				if ok, err := filepath.Match(globPattern, name); err != nil {
+					return nil, fmt.Errorf("failed to glob match entry %q against pattern %q", name, globPattern)
 				} else if ok {
-					out = append(out, entry.Name)
+					out = append(out, name)
 				}
 			}
 			return out, nil
 		},
+		"randomID": func() (string, error) {
+			var out [12]byte
+			if _, err := rand.Read(out[:]); err != nil {
+				return "", err
+			}
+			return "id-" + hex.EncodeToString(out[:]), nil
+		},
 	})
+	templ, err = templ.ParseFS(page, "*.gohtml")
+	must(err, "failed to parse page template")
 
-	f, err := os.OpenFile(*outStr, os.O_WRONLY|os.O_CREATE, 0o755)
+	f, err := os.OpenFile(*outStr, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0o755)
 	must(err, "failed to open output file")
 	defer f.Close()
 	must(templ.ExecuteTemplate(f, "main", pageDefinition), "failed to build page")
@@ -166,24 +174,21 @@ func (p FilePatch) Message() string {
 }
 
 type Page struct {
-	Title string          `yaml:"title"`
-	Def   *ForkDefinition `yaml:"def"`
+	Title  string          `yaml:"title"`
+	Footer string          `yaml:"footer"`
+	Def    *ForkDefinition `yaml:"def"`
 }
 
 type ForkDefinition struct {
-	Title       string            `yaml:"title"`
-	Description string            `yaml:"description"`
-	Globs       []string          `yaml:"globs"`
-	Sub         []*ForkDefinition `yaml:"sub"`
+	Title       string            `yaml:"title,omitempty"`
+	Description string            `yaml:"description,omitempty"`
+	Globs       []string          `yaml:"globs,omitempty"`
+	Sub         []*ForkDefinition `yaml:"sub,omitempty"`
 }
 
 type NestedForkDefinition struct {
 	Def   *ForkDefinition
 	Level int
-}
-
-func (nd *NestedForkDefinition) Title() string {
-	return fmt.Sprintf("<h%d>%s</%d>", nd.Level, nd.Def.Title, nd.Level)
 }
 
 func (nd *NestedForkDefinition) NextLevel() int {
