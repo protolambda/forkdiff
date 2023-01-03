@@ -11,10 +11,19 @@
 
     <title>{{.Title}}</title>
 
+    <style>
+        .line-stat {
+            width: 14rem;
+            float: right;
+        }
+        .line-stat div {
+            width: 50%;
+        }
+    </style>
     {{ template "terminalcss" }}
 </head>
 <body>
-    <div class="col-xl-10 col-xxl-8 mx-auto p-3 py-md-5">
+    <div class="col-xl-10 col-xxl-8 mx-auto px-3 py-1 py-md-3">
         <main>
             {{ template "forkdef" .Def }}
             {{ if .Ignored }}
@@ -36,15 +45,22 @@
 
 {{define "forkdef"}}
 {{- /*gotype: github.com/protolambda/forkdiff.ForkDefinition*/ -}}
-<div>
-    <div class="row">
+<div class="ps-1 py-2 my-1">
+    {{- $defID := randomID -}}
+    <div class="row border-bottom border-1" data-bs-toggle="collapse" data-bs-target="#{{- $defID -}}" role="button"
+         aria-expanded="{{- if (eq .Level 1) -}}true{{- else -}}false{{- end -}}" aria-controls="{{- $defID -}}">
         {{ if .Title }}
-            <div class="col-8 col-md-4  text-start"><h{{- .Level -}}>{{.Title}}</h{{- .Level -}}></div>
+            <div class="col-12 col-sm-9 text-start"><h{{- .Level -}}>{{.Title}}</h{{- .Level -}}></div>
         {{end}}
-        <div class="col-2 text-end mt-2"><span class="text-success">+ {{- .LinesAdded -}}</span></div>
-        <div class="col-2 text-start mt-2"><span class="text-danger">- {{- .LinesDeleted -}}</span></div>
+        <div class="col-12 col-sm-3 ms-auto mt-2">
+            <div class="row line-stat">
+                <div class="text-end"><span class="text-success">+ {{- .LinesAdded -}}</span></div>
+                <div class="text-start"><span class="text-danger">- {{- .LinesDeleted -}}</span></div>
+            </div>
+        </div>
     </div>
-    <div class="row forkdef-content my-3">
+
+    <div class="row forkdef-content collapse {{if (eq .Level 1)}}show{{end}} border-1 ps-3 my-3" id="{{- $defID -}}">
         <div>{{ renderMarkdown .Description }}</div>
         <div>
             {{ range $i, $file := .Files }}
@@ -64,28 +80,17 @@
     {{- /*gotype: github.com/protolambda/forkdiff.FilePatchStats*/ -}}
 
     {{- $page := page -}}
-    <div class="container-fluid border-bottom">
+    <div class="border-bottom">
         {{- $patchID := randomID -}}
         <div class="row">
-            <div class="col-8 col-md-4 text-start pe-2">
+            <div class="col-12 col-md-4 text-start pe-2">
                 <a class="text-decoration-none" data-bs-toggle="collapse" href="#{{- $patchID -}}" role="button"
                    aria-expanded="false" aria-controls="{{- $patchID -}}">
                     <code>{{ .Path }}</code>
                 </a>
             </div>
 
-            <div class="col-4 col-md-4 px-2">
-                {{ if .Binary }}
-                    <span class="text-secondary">(binary file)</span>
-                {{ else }}
-                    <div class="row">
-                        <div class="col-6 text-end"><span class="text-success">+ {{- .LinesAdded -}}</span></div>
-                        <div class="col-6 text-start"><span class="text-danger">- {{- .LinesDeleted -}}</span></div>
-                    </div>
-                {{ end }}
-            </div>
-
-            <div class="col col-md-4 text-end ps-2">
+            <div class="col-12 col-sm-8 col-md-4 text-start px-2">
                 <div class="row">
                     <div class="col-6">
                         {{ if existsInBase .Path }}
@@ -103,6 +108,17 @@
                         {{ end }}
                     </div>
                 </div>
+            </div>
+
+            <div class="col-12 col-sm-4 ms-auto ps-2">
+                {{ if .Binary }}
+                    <span class="text-secondary">(binary file)</span>
+                {{ else }}
+                    <div class="row line-stat">
+                        <div class="text-end"><span class="text-success">+ {{- .LinesAdded -}}</span></div>
+                        <div class="text-start"><span class="text-danger">- {{- .LinesDeleted -}}</span></div>
+                    </div>
+                {{ end }}
             </div>
         </div>
         <div class="collapse patch-content term-container" id="{{- $patchID -}}">{{- renderPatch . -}}</div>
