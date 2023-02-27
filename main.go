@@ -88,8 +88,10 @@ func main() {
 		from, to := fp.Files()
 		if to != nil {
 			patchByName[to.Path()] = fp
-		} else {
+		} else if from != nil {
 			patchByName[from.Path()] = fp
+		} else {
+			continue
 		}
 		if to != nil {
 			forkFiles[to.Path()] = struct{}{}
