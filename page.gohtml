@@ -6,7 +6,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-GLhlTQ8iRABdZLl6O3oVMWSktQOp6b7In1Zl3/Jr59b6EGGoI1aFkw7cmDA6j6gD" crossorigin="anonymous">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.2/font/bootstrap-icons.css">
 
     <title>{{.Title}}</title>
@@ -17,9 +17,10 @@
             float: right;
         }
         .line-stat div {
-            width: 50%;
+            width: 33%;
         }
     </style>
+
     {{ template "terminalcss" }}
 </head>
 <body>
@@ -38,7 +39,58 @@
         {{ renderMarkdown .Footer }}
     </footer>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.min.js" integrity="sha384-cuYeSxntonz0PPNlHhBs68uyIAVpIIOZZ5JqeqvYYIcEL727kskC66kF92t6Xl2V" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js" integrity="sha384-oBqDVmMz9ATKxIep9tiCxS/Z9fNfEXiDAYTujMAeBAsjFuCZSmKbSSUnQlmh/jp3" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.min.js" integrity="sha384-mQ93GR66B00ZXjt0YO5KlohRA5SY2XofN4zfuZxLkoj1gXtW8ANNCe9d5Y3eG5eD" crossorigin="anonymous"></script>
+    <script type="text/javascript">
+        const storedTheme = localStorage.getItem('theme')
+
+        // Get the preferred theme from the user's OS
+        const getPreferredTheme = () => {
+            if (storedTheme) {
+                return storedTheme
+            }
+
+            return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+        }
+
+        // Set the bootstrap theme
+        const setTheme = function (theme) {
+            document.documentElement.setAttribute('data-bs-theme', theme)
+            if (theme === 'dark') {
+                document.getElementById('dark-mode-toggle').setAttribute('checked', true)
+            }
+        }
+
+        // Returns true if the current theme is dark
+        const isDark = () => {
+            return document.documentElement.getAttribute('data-bs-theme') === 'dark'
+        }
+
+        // Toggles dark mode
+        const toggleDarkMode = () => {
+            const newTheme = isDark() ? 'light' : 'dark'
+            setTheme(newTheme)
+            localStorage.setItem('theme', newTheme)
+        }
+
+        // Set the preferred theme on page load
+        window.onload = () => {
+            // Set preferred theme
+            setTheme(getPreferredTheme());
+            // Initialize tooltips
+            const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+            const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
+        }
+
+        // Toggle dark mode when the toggle button is clicked
+        addEventListener("click", (event) => {
+            if (event.target.id === 'dark-mode-toggle') {
+                toggleDarkMode();
+                // De-focus the toggle
+                document.activeElement.blur()
+            }
+        });
+    </script>
 </body>
 </html>
 {{end}}
@@ -47,8 +99,8 @@
 {{- /*gotype: github.com/protolambda/forkdiff.ForkDefinition*/ -}}
 <div class="ps-1 py-2 my-1">
     {{- $defID := randomID -}}
-    <div class="row border-bottom border-1" data-bs-toggle="collapse" data-bs-target="#{{- $defID -}}" role="button"
-         aria-expanded="{{- if (eq .Level 1) -}}true{{- else -}}false{{- end -}}" aria-controls="{{- $defID -}}">
+    <div class="row border-bottom border-1" {{- if (gt .Level 1) -}}data-bs-toggle="collapse" data-bs-target="#{{- $defID -}}"{{- end -}}
+        role="button" aria-expanded="{{- if (eq .Level 1) -}}true{{- else -}}false{{- end -}}" aria-controls="{{- $defID -}}">
         {{ if .Title }}
             <div class="col-12 col-sm-9 text-start"><h{{- .Level -}}>{{.Title}}</h{{- .Level -}}></div>
         {{end}}
@@ -56,6 +108,12 @@
             <div class="row line-stat">
                 <div class="text-end"><span class="text-success">+ {{- .LinesAdded -}}</span></div>
                 <div class="text-start"><span class="text-danger">- {{- .LinesDeleted -}}</span></div>
+                {{- if (eq .Level 1) -}}
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch" id="dark-mode-toggle" data-bs-toggle="tooltip"
+                            data-bs-placement="bottom" data-bs-title="Toggle Dark Mode">
+                    </div>
+                {{- end -}}
             </div>
         </div>
     </div>
