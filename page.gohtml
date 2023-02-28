@@ -17,7 +17,7 @@
             float: right;
         }
         .line-stat div {
-            width: 33%;
+            width: 50%;
         }
     </style>
 
@@ -25,13 +25,26 @@
 </head>
 <body>
     <div class="col-xl-10 col-xxl-8 mx-auto px-3 py-1 py-md-3">
-        <main>
-            {{ template "forkdef" .Def }}
-            {{ if .Ignored }}
-                <div class="text-muted">
-                    {{ template "forkdef" .Ignored }}
+        <main class="container-fluid">
+            <div class="row">
+                <div>
+                    <div class="float-end">
+                        <div class="form-check form-switch">
+                            <i class="bi bi-brightness-low" id="dark-mode-icon"></i>
+                            <input class="form-check-input" type="checkbox" role="switch" id="dark-mode-toggle" data-bs-toggle="tooltip"
+                                   data-bs-placement="bottom" data-bs-title="Toggle Dark Mode"/>
+                        </div>
+                    </div>
                 </div>
-            {{ end }}
+            </div>
+            <div class="row">
+                {{ template "forkdef" .Def }}
+                {{ if .Ignored }}
+                    <div class="text-muted">
+                        {{ template "forkdef" .Ignored }}
+                    </div>
+                {{ end }}
+            </div>
         </main>
     </div>
 
@@ -58,6 +71,10 @@
             document.documentElement.setAttribute('data-bs-theme', theme)
             if (theme === 'dark') {
                 document.getElementById('dark-mode-toggle').setAttribute('checked', true)
+                document.getElementById('dark-mode-icon').classList.replace('bi-brightness-high-fill', 'bi-brightness-low')
+            } else {
+                document.getElementById('dark-mode-toggle').setAttribute('checked', false)
+                document.getElementById('dark-mode-icon').classList.replace('bi-brightness-low', 'bi-brightness-high-fill')
             }
         }
 
@@ -108,12 +125,6 @@
             <div class="row line-stat">
                 <div class="text-end"><span class="text-success">+ {{- .LinesAdded -}}</span></div>
                 <div class="text-start"><span class="text-danger">- {{- .LinesDeleted -}}</span></div>
-                {{- if (eq .Level 1) -}}
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" role="switch" id="dark-mode-toggle" data-bs-toggle="tooltip"
-                            data-bs-placement="bottom" data-bs-title="Toggle Dark Mode">
-                    </div>
-                {{- end -}}
             </div>
         </div>
     </div>
