@@ -29,10 +29,16 @@ import (
 var page embed.FS
 
 func main() {
-	repoPathStr := flag.String("repo", ".", "path to local git repository")
+	repoPathStr := flag.String("repo", ".", "path to local git repository (fork)")
+	upstreamRepoPathStr := flag.String("upstream-repo", "", "path to local git repository (upstream)")
 	forkPagePathStr := flag.String("fork", "fork.yaml", "fork page definition")
 	outStr := flag.String("out", "index.html", "output")
 	flag.Parse()
+
+	// Upstream repo path defaults to the same value as repoPathStr if not set
+	if *upstreamRepoPathStr == "" {
+		upstreamRepoPathStr = repoPathStr
+	}
 
 	must := func(err error, msg string, args ...any) {
 		if err != nil {
@@ -47,10 +53,13 @@ func main() {
 		must(errors.New("no fork definition defined"), "need to root fork definition")
 	}
 
-	repo, err := git.PlainOpen(*repoPathStr)
+	forkRepo, err := git.PlainOpen(*repoPathStr)
 	must(err, "failed to open git repository %q", *repoPathStr)
 
-	findCommit := func(rr *RefRepo) *object.Commit {
+	baseRepo, err := git.PlainOpen(*upstreamRepoPathStr)
+	must(err, "failed to open git repository %q", *upstreamRepoPathStr)
+
+	findCommit := func(rr *RefRepo, repo *git.Repository) *object.Commit {
 		if rr.Ref != "" && rr.Hash != "" {
 			must(errors.New("hash and ref"), "cannot use both hash and reference")
 		}
@@ -70,11 +79,11 @@ func main() {
 		return commit
 	}
 
-	baseCommit := findCommit(&pageDefinition.Base)
+	baseCommit := findCommit(&pageDefinition.Base, baseRepo)
 	baseTree, err := baseCommit.Tree()
 	must(err, "failed to open base git tree")
 
-	forkCommit := findCommit(&pageDefinition.Fork)
+	forkCommit := findCommit(&pageDefinition.Fork, forkRepo)
 	forkTree, err := forkCommit.Tree()
 	must(err, "failed to open fork git tree")
 
