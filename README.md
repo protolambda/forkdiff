@@ -13,6 +13,8 @@ Usage:
     fork page definition (default "fork.yaml")
 -out string
     output (default "index.html")
+-upstream-repo string (optional)
+    path to local git repository (default value of -repo)
 ```
 
 The `fork.yaml` defines the page structure, to organize and document the diff of the fork.
