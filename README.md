@@ -23,6 +23,7 @@ Example:
 
 ```yaml
 title: "protolambda's Greeter fork"  # Define the HTML page title
+logo: "logo.png"
 footer: |  # define the footer with markdown
   [Greeter](https://github.com/protolambda/greeter) fork overview &middot created with [Forkdiff](https://github.com/protolambda/forkdiff)
 base:

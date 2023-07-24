@@ -269,6 +269,7 @@ type RefRepo struct {
 
 type Page struct {
 	Title  string          `yaml:"title"`
+	Logo   string          `yaml:"logo"`
 	Footer string          `yaml:"footer"`
 	Base   RefRepo         `yaml:"base"`
 	Fork   RefRepo         `yaml:"fork"`
