@@ -43,7 +43,7 @@ func main() {
 	must := func(err error, msg string, args ...any) {
 		if err != nil {
 			_, _ = fmt.Fprintf(os.Stderr, msg, args...)
-			_, _ = fmt.Fprintf(os.Stderr, "\nerror: %v", err)
+			_, _ = fmt.Fprintf(os.Stderr, "\nerror: %v\n", err)
 			os.Exit(1)
 		}
 	}
@@ -314,7 +314,7 @@ func (fd *ForkDefinition) hydrate(patchByName map[string]diff.FilePatch, remaini
 				return fmt.Errorf("failed to glob match entry %q against pattern %q", name, globPattern)
 			} else if ok {
 				if _, ok := remaining[name]; !ok {
-					return fmt.Errorf("file %q was matched by glob %d (%q) but is not remaining", name, i, globPattern)
+					return fmt.Errorf("file %q was matched by glob %d (%q) but is not remaining. Make sure each file is referenced only once.", name, i, globPattern)
 				}
 				delete(remaining, name)
 				fd.hydratePatch(name, p)
