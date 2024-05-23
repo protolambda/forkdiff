@@ -13,8 +13,6 @@ jobs:
     steps:
       - name: Checkout this repo
         uses: actions/checkout@v3
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
       - name: Set up Docker Context for Buildx
         shell: bash
         id: buildx-context
@@ -47,6 +45,6 @@ jobs:
           file: Dockerfile
           tags: ${{ steps.meta.outputs.tags }}
           push: true
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
