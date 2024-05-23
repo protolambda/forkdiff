@@ -54,6 +54,9 @@ def:
         description: "The `printer` package prints greetings"
         globs:
           - "hello/printer/*"
+          - "hello/printer/display/**"  # double start glob patterns work too, for recursive matching!
+        ignore:
+          - "hello/printer/testdata/**"  # to group test-data with the package, but ignore the lines, use "ignore"
       - title: "MOTD"
         description: "New package that generates a message of the day (MOTD) to add to the greeting"
         globs:

@@ -296,7 +296,7 @@ type ForkDefinition struct {
 	Description string            `yaml:"description,omitempty"`
 	Globs       []string          `yaml:"globs,omitempty"`
 	Sub         []*ForkDefinition `yaml:"sub,omitempty"`
-	Ignored     []string          `yaml:"ignored,omitempty"`
+	Ignore      []string          `yaml:"ignore,omitempty"`
 
 	Files        []FilePatchStats `yaml:"-"`
 	LinesAdded   int              `yaml:"-"`
@@ -333,7 +333,7 @@ func (fd *ForkDefinition) hydrate(patchByName map[string]diff.FilePatch, remaini
 			fmt.Printf("cannot find patch %q\n", name)
 			continue
 		}
-		for _, globPattern := range fd.Ignored {
+		for _, globPattern := range fd.Ignore {
 			if ok, err := doublestar.Match(globPattern, name); err != nil {
 				return fmt.Errorf("failed to glob match ignored-entry %q against pattern %q", name, globPattern)
 			} else if ok {
