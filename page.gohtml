@@ -21,6 +21,18 @@
         .line-stat div {
             width: 50%;
         }
+        .text-add-ignored {
+            color: #93ad93;
+            font-style: italic;
+        }
+        .text-delete-ignored {
+            color: #c47777;
+            font-style: italic;
+        }
+        .toplevelstat {
+            margin-left: 0 !important;
+            width: 15rem;
+        }
     </style>
 
     {{ template "terminalcss" }}
@@ -42,9 +54,7 @@
             <div class="row">
                 {{ template "forkdef" .Def }}
                 {{ if .Ignored }}
-                    <div class="text-muted">
-                        {{ template "forkdef" .Ignored }}
-                    </div>
+                    {{ template "forkdef" .Ignored }}
                 {{ end }}
             </div>
         </main>
@@ -121,12 +131,29 @@
     <div class="row border-bottom border-1" {{- if (gt .Level 1) -}}data-bs-toggle="collapse" data-bs-target="#{{- $defID -}}"{{- end -}}
         role="button" aria-expanded="{{- if (eq .Level 1) -}}true{{- else -}}false{{- end -}}" aria-controls="{{- $defID -}}">
         {{ if .Title }}
-            <div class="col-12 col-sm-9 text-start"><h{{- .Level -}}>{{.Title}}</h{{- .Level -}}></div>
+            <div class="col-12 col-md-12 col-lg-6 col-xl-6 text-start"><h{{- .Level -}}>{{.Title}}</h{{- .Level -}}></div>
         {{end}}
-        <div class="col-12 col-sm-3 ms-auto mt-2">
+
+        <div class="col-6 col-md-3 col-xl-2 ms-auto mt-2">
             <div class="row line-stat">
-                <div class="text-end"><span class="text-success">+ {{- .LinesAdded -}}</span></div>
-                <div class="text-start"><span class="text-danger">- {{- .LinesDeleted -}}</span></div>
+                {{ if eq .Level 1 }}
+                    <span class="text-end">diff:</span>
+                {{ end }}
+                {{ if eq .Level 1 }}
+                    <span class="text-end">ignored:</span>
+                {{ end }}
+            </div>
+        </div>
+        <div class="col-6 col-md-3 col-xl-2 ms-auto mt-2 {{if eq .Level 1}}toplevelstat{{end}}">
+            <div class="row line-stat">
+                {{ if or (gt .LinesAdded 0) (gt .LinesDeleted 0) }}
+                    <div class="text-end"><span class="text-success">+ {{- .LinesAdded -}}</span></div>
+                    <div class="text-start"><span class="text-danger">- {{- .LinesDeleted -}}</span></div>
+                {{ end }}
+                {{ if or (gt .IgnoredLinesAdded 0) (gt .IgnoredLinesDeleted 0) }}
+                    <div class="text-end"><span class="text-add-ignored">+ {{- .IgnoredLinesAdded -}}</span></div>
+                    <div class="text-start"><span class="text-delete-ignored">- {{- .IgnoredLinesDeleted -}}</span></div>
+                {{ end }}
             </div>
         </div>
     </div>
@@ -135,6 +162,9 @@
         <div>{{ renderMarkdown .Description }}</div>
         <div>
             {{ range $i, $file := .Files }}
+                {{ template "patch" $file }}
+            {{end}}
+            {{ range $i, $file := .IgnoredFiles }}
                 {{ template "patch" $file }}
             {{end}}
         </div>
@@ -155,10 +185,17 @@
         {{- $patchID := randomID -}}
         <div class="row">
             <div class="col-12 col-md-4 text-start pe-2">
-                <a class="text-decoration-none" data-bs-toggle="collapse" href="#{{- $patchID -}}" role="button"
-                   aria-expanded="false" aria-controls="{{- $patchID -}}">
-                    <code>{{ .Path }}</code>
-                </a>
+                {{ if .Ignored }}
+                    <a class="text-muted" data-bs-toggle="collapse" href="#{{- $patchID -}}" role="button"
+                       aria-expanded="false" aria-controls="{{- $patchID -}}">
+                        <code>{{ .Path }}</code>
+                    </a>
+                {{ else }}
+                    <a class="text-decoration-none" data-bs-toggle="collapse" href="#{{- $patchID -}}" role="button"
+                       aria-expanded="false" aria-controls="{{- $patchID -}}">
+                        <code>{{ .Path }}</code>
+                    </a>
+                {{ end }}
             </div>
 
             <div class="col-12 col-sm-8 col-md-4 text-start px-2">
@@ -186,8 +223,13 @@
                     <span class="text-secondary">(binary file)</span>
                 {{ else }}
                     <div class="row line-stat">
-                        <div class="text-end"><span class="text-success">+ {{- .LinesAdded -}}</span></div>
-                        <div class="text-start"><span class="text-danger">- {{- .LinesDeleted -}}</span></div>
+                        {{ if .Ignored }}
+                            <div class="text-end"><span class="text-add-ignored">+ {{- .LinesAdded -}}</span></div>
+                            <div class="text-start"><span class="text-delete-ignored">- {{- .LinesDeleted -}}</span></div>
+                        {{ else }}
+                            <div class="text-end"><span class="text-success">+ {{- .LinesAdded -}}</span></div>
+                            <div class="text-start"><span class="text-danger">- {{- .LinesDeleted -}}</span></div>
+                        {{ end }}
                     </div>
                 {{ end }}
             </div>

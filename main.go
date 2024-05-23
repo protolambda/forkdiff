@@ -9,6 +9,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/bmatcuk/doublestar"
 	t2html "github.com/buildkite/terminal-to-html/v3"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -17,9 +18,9 @@ import (
 	"github.com/gomarkdown/markdown"
 	"github.com/gomarkdown/markdown/html"
 	"github.com/gomarkdown/markdown/parser"
+	"golang.org/x/exp/maps"
 	"gopkg.in/yaml.v3"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 	"text/template"
@@ -113,7 +114,7 @@ func main() {
 	ignored := make(map[string]diff.FilePatch)
 	for k := range patchByName {
 		for _, globPattern := range pageDefinition.Ignore {
-			ok, err := filepath.Match(globPattern, k)
+			ok, err := doublestar.Match(globPattern, k)
 			must(err, "failed to check %q against ignore glob pattern %q", k, globPattern)
 			if ok {
 				ignored[k] = patchByName[k]
@@ -137,7 +138,7 @@ func main() {
 		}
 		sort.Strings(remainingPaths)
 		for _, k := range remainingPaths {
-			remainingDef.hydratePatch(k, patchByName[k])
+			remainingDef.hydratePatch(k, patchByName[k], false)
 		}
 		pageDefinition.Def.Sub = append(pageDefinition.Def.Sub, remainingDef)
 		pageDefinition.Def.LinesAdded += remainingDef.LinesAdded
@@ -154,9 +155,11 @@ func main() {
 			Level: 4,
 		}
 		for _, k := range ignoredPaths {
-			ignoredDef.hydratePatch(k, ignored[k])
+			ignoredDef.hydratePatch(k, ignored[k], true)
 		}
 		pageDefinition.Ignored = ignoredDef
+		pageDefinition.Def.IgnoredLinesAdded += ignoredDef.IgnoredLinesAdded
+		pageDefinition.Def.IgnoredLinesDeleted += ignoredDef.IgnoredLinesDeleted
 	}
 
 	templ := template.New("main")
@@ -285,6 +288,7 @@ type FilePatchStats struct {
 	LinesDeleted int
 	Binary       bool
 	Patch        diff.FilePatch
+	Ignored      bool
 }
 
 type ForkDefinition struct {
@@ -292,11 +296,17 @@ type ForkDefinition struct {
 	Description string            `yaml:"description,omitempty"`
 	Globs       []string          `yaml:"globs,omitempty"`
 	Sub         []*ForkDefinition `yaml:"sub,omitempty"`
+	Ignored     []string          `yaml:"ignored,omitempty"`
 
 	Files        []FilePatchStats `yaml:"-"`
 	LinesAdded   int              `yaml:"-"`
 	LinesDeleted int              `yaml:"-"`
-	Level        int              `yaml:"-"`
+
+	IgnoredFiles        []FilePatchStats `yaml:"-"`
+	IgnoredLinesAdded   int              `yaml:"-"`
+	IgnoredLinesDeleted int              `yaml:"-"`
+
+	Level int `yaml:"-"`
 }
 
 func (fd *ForkDefinition) hydrate(patchByName map[string]diff.FilePatch, remaining map[string]struct{}, level int) error {
@@ -307,32 +317,62 @@ func (fd *ForkDefinition) hydrate(patchByName map[string]diff.FilePatch, remaini
 		}
 		fd.LinesAdded += sub.LinesAdded
 		fd.LinesDeleted += sub.LinesDeleted
+		fd.IgnoredLinesAdded += sub.IgnoredLinesAdded
+		fd.IgnoredLinesDeleted += sub.IgnoredLinesDeleted
 	}
-	for i, globPattern := range fd.Globs {
-		for name, p := range patchByName {
-			if ok, err := filepath.Match(globPattern, name); err != nil {
+	remainingKeys := maps.Keys(remaining)
+	sort.Strings(remainingKeys)
+	for _, name := range remainingKeys {
+		_, ok := remaining[name] // we remove entries while we iterate, so we have to keep checking if things are there
+		if !ok {
+			fmt.Printf("not remaining anymore %q\n", name)
+			continue
+		}
+		p, ok := patchByName[name]
+		if !ok {
+			fmt.Printf("cannot find patch %q\n", name)
+			continue
+		}
+		for _, globPattern := range fd.Ignored {
+			if ok, err := doublestar.Match(globPattern, name); err != nil {
+				return fmt.Errorf("failed to glob match ignored-entry %q against pattern %q", name, globPattern)
+			} else if ok {
+				fmt.Printf("ignoring %q\n", name)
+				delete(remaining, name)
+				fd.hydratePatch(name, p, true)
+				break
+			}
+		}
+		for _, globPattern := range fd.Globs {
+			if ok, err := doublestar.Match(globPattern, name); err != nil {
 				return fmt.Errorf("failed to glob match entry %q against pattern %q", name, globPattern)
 			} else if ok {
-				if _, ok := remaining[name]; !ok {
-					return fmt.Errorf("file %q was matched by glob %d (%q) but is not remaining. Make sure each file is referenced only once.", name, i, globPattern)
-				}
+				fmt.Printf("matched %q\n", name)
 				delete(remaining, name)
-				fd.hydratePatch(name, p)
+				fd.hydratePatch(name, p, false)
+				break
 			}
 		}
 	}
 	return nil
 }
 
-func (fd *ForkDefinition) hydratePatch(name string, p diff.FilePatch) {
+func (fd *ForkDefinition) hydratePatch(name string, p diff.FilePatch, ignored bool) {
 	stat := FilePatchStats{
 		Path:         name,
 		LinesAdded:   countOperations(p.Chunks(), diff.Add),
 		LinesDeleted: countOperations(p.Chunks(), diff.Delete),
 		Binary:       p.IsBinary(),
 		Patch:        p,
+		Ignored:      ignored,
 	}
-	fd.Files = append(fd.Files, stat)
-	fd.LinesAdded += stat.LinesAdded
-	fd.LinesDeleted += stat.LinesDeleted
+	if ignored {
+		fd.IgnoredFiles = append(fd.IgnoredFiles, stat)
+		fd.IgnoredLinesAdded += stat.LinesAdded
+		fd.IgnoredLinesDeleted += stat.LinesDeleted
+	} else {
+		fd.Files = append(fd.Files, stat)
+		fd.LinesAdded += stat.LinesAdded
+		fd.LinesDeleted += stat.LinesDeleted
+	}
 }
