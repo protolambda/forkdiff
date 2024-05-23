@@ -1,12 +1,11 @@
-FROM golang:1.19 AS builder
+FROM golang:1.22 AS builder
 
 ENV GO111MODULE=on \
   CGO_ENABLED=0 \
   GOOS=linux \
   GOARCH=amd64
 
-RUN apt-get -qq update && \
-  apt-get -yqq install upx
+RUN apt-get -qq update
 
 WORKDIR /src
 COPY . .
@@ -15,8 +14,7 @@ RUN go build \
   -ldflags "-s -w -extldflags '-static'" \
   -o /bin/app \
   . \
-  && strip /bin/app \
-  && upx -q -9 /bin/app
+  && strip /bin/app
 
 FROM scratch
 
