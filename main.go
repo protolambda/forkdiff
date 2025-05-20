@@ -9,6 +9,11 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"os"
+	"sort"
+	"strings"
+	"text/template"
+
 	"github.com/bmatcuk/doublestar"
 	t2html "github.com/buildkite/terminal-to-html/v3"
 	"github.com/go-git/go-git/v5"
@@ -20,10 +25,6 @@ import (
 	"github.com/gomarkdown/markdown/parser"
 	"golang.org/x/exp/maps"
 	"gopkg.in/yaml.v3"
-	"os"
-	"sort"
-	"strings"
-	"text/template"
 )
 
 //go:embed page.gohtml
@@ -116,7 +117,7 @@ func main() {
 		for _, globPattern := range pageDefinition.Ignore {
 			ok, err := doublestar.Match(globPattern, k)
 			must(err, "failed to check %q against ignore glob pattern %q", k, globPattern)
-			if ok {
+			if ok && patchByName[k] != nil {
 				ignored[k] = patchByName[k]
 				delete(patchByName, k)
 			}
