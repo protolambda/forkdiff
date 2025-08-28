@@ -51,6 +51,14 @@
                     </div>
                 </div>
             </div>
+            <div class="row mb-3">
+                <div class="col-md-6 mb-2 mb-md-0">
+                    <input type="text" class="form-control" id="file-filter" placeholder="Filter by file name" />
+                </div>
+                <div class="col-md-6">
+                    <input type="text" class="form-control" id="content-filter" placeholder="Filter by content" />
+                </div>
+            </div>
             <div class="row">
                 {{ template "forkdef" .Def }}
                 {{ if .Ignored }}
@@ -119,6 +127,27 @@
                 document.activeElement.blur()
             }
         });
+
+        // Filter patches by file path and diff content
+        const fileFilter = document.getElementById('file-filter')
+        const contentFilter = document.getElementById('content-filter')
+        const applyFilters = () => {
+            const fileVal = fileFilter.value.toLowerCase()
+            const contentVal = contentFilter.value.toLowerCase()
+            document.querySelectorAll('.patch').forEach(patch => {
+                const filePath = patch.querySelector('code').textContent.toLowerCase()
+                const diffText = patch.querySelector('.patch-content').textContent.toLowerCase()
+                const fileMatch = filePath.includes(fileVal)
+                const contentMatch = diffText.includes(contentVal)
+                patch.style.display = (fileMatch && contentMatch) ? '' : 'none'
+            })
+            document.querySelectorAll('.forkdef').forEach(def => {
+                const hasVisiblePatch = Array.from(def.querySelectorAll('.patch')).some(p => p.style.display !== 'none')
+                def.style.display = hasVisiblePatch ? '' : 'none'
+            })
+        }
+        fileFilter.addEventListener('input', applyFilters)
+        contentFilter.addEventListener('input', applyFilters)
     </script>
 </body>
 </html>
@@ -126,7 +155,7 @@
 
 {{define "forkdef"}}
 {{- /*gotype: github.com/protolambda/forkdiff.ForkDefinition*/ -}}
-<div class="ps-1 py-2 my-1">
+<div class="forkdef ps-1 py-2 my-1">
     {{- $defID := randomID -}}
     <div class="row border-bottom border-1" {{- if (gt .Level 1) -}}data-bs-toggle="collapse" data-bs-target="#{{- $defID -}}"{{- end -}}
         role="button" aria-expanded="{{- if (eq .Level 1) -}}true{{- else -}}false{{- end -}}" aria-controls="{{- $defID -}}">
@@ -181,7 +210,7 @@
     {{- /*gotype: github.com/protolambda/forkdiff.FilePatchStats*/ -}}
 
     {{- $page := page -}}
-    <div class="border-bottom">
+    <div class="border-bottom patch">
         {{- $patchID := randomID -}}
         <div class="row">
             <div class="col-12 col-md-4 text-start pe-2">
